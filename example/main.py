@@ -2,7 +2,8 @@ import os
 import streamlit as st
 from langchain.embeddings import CacheBackedEmbeddings
 from langchain.storage import LocalFileStore
-from langchain_openai import OpenAIEmbeddings
+# from langchain_openai import OpenAIEmbeddings
+from langchain_community.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
@@ -12,19 +13,17 @@ from langchain_community.document_loaders.unstructured import UnstructuredFileLo
 from langchain_community.vectorstores.faiss import FAISS
 from langserve import RemoteRunnable
 
-
-# OPENAI API KEY 입력
-# Embedding 을 무료 한글 임베딩으로 대체하면 필요 없음!
-os.environ["OPENAI_API_KEY"] = "OPENAI API KEY 입력"
-
-# 1) REMOTE 접속: 본인의 REMOTE LANGSERVE 주소 입력
-# (예시)
-# LANGSERVE_ENDPOINT = "https://poodle-deep-marmot.ngrok-free.app/llm/"
-LANGSERVE_ENDPOINT = "http://0.0.0.0:8000/llm"
+# 1) 필수 디렉토리 생성
+if os.path.exists(".cache"):
+    os.makedirs(".cache")
+if os.path.exists(".cache/embeddings"):
+    os.makedirs(".cache/embeddings")
+if os.path.exists(".cache/files"):
+    os.makedirs(".cache/files")
 
 # 2) LocalHost 접속: 끝에 붙는 N4XyA 는 각자 다르니
 # http://localhost:8000/llm/playground 에서 python SDK 에서 확인!
-# LANGSERVE_ENDPOINT = "http://localhost:8000/llm/c/N4XyA"
+LANGSERVE_ENDPOINT = "http://localhost:8000/llm/c/N4XyA"
 
 # 프롬프트를 자유롭게 수정해 보세요!
 RAG_PROMPT_TEMPLATE = """당신은 질문에 친절하게 답변하는 AI 입니다. 검색된 다음 문맥을 사용하여 질문에 답하세요. 답을 모른다면 '아잉~몰라용~'하고 귀엽게 답변하세요.
@@ -73,7 +72,16 @@ def embed_file(file):
     )
     loader = UnstructuredFileLoader(file_path)
     docs = loader.load_and_split(text_splitter=text_splitter)
-    embeddings = OpenAIEmbeddings()
+    
+    model_name = "BAAI/bge-m3"
+    model_kwargs = {'device': 'cuda:0'} # gpu가 없거나 부족하다면 `cuda:0`를 `cpu`로 바꿔주세요.
+    encode_kwargs = {'normalize_embeddings': True} 
+    embeddings = HuggingFaceEmbeddings(
+        model_name=model_name,
+        model_kwargs=model_kwargs,
+        encode_kwargs=encode_kwargs,
+    )
+    # embeddings = OpenAIEmbeddings()
     cached_embeddings = CacheBackedEmbeddings.from_bytes_store(embeddings, cache_dir)
     vectorstore = FAISS.from_documents(docs, embedding=cached_embeddings)
     retriever = vectorstore.as_retriever()
@@ -105,7 +113,7 @@ if user_input := st.chat_input():
         ollama = RemoteRunnable(LANGSERVE_ENDPOINT)
         chat_container = st.empty()
         if file is not None:
-            prompt = ChatPromptTemplate.from_template()
+            prompt = ChatPromptTemplate.from_template(RAG_PROMPT_TEMPLATE)
 
             # 체인을 생성합니다.
             rag_chain = (
