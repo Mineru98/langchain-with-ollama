@@ -14,12 +14,12 @@ from langchain_community.vectorstores.faiss import FAISS
 from langserve import RemoteRunnable
 
 # 1) 필수 디렉토리 생성
-if os.path.exists(".cache"):
-    os.makedirs(".cache")
-if os.path.exists(".cache/embeddings"):
-    os.makedirs(".cache/embeddings")
-if os.path.exists(".cache/files"):
-    os.makedirs(".cache/files")
+if not os.path.exists(".cache"):
+    os.mkdir(".cache")
+if not os.path.exists(".cache/embeddings"):
+    os.mkdir(".cache/embeddings")
+if not os.path.exists(".cache/files"):
+    os.mkdir(".cache/files")
 
 # 2) LocalHost 접속: 끝에 붙는 N4XyA 는 각자 다르니
 # http://localhost:8000/llm/playground 에서 python SDK 에서 확인!
