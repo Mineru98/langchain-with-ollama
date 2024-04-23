@@ -20,6 +20,7 @@ if not os.path.exists(".cache/embeddings"):
     os.mkdir(".cache/embeddings")
 if not os.path.exists(".cache/files"):
     os.mkdir(".cache/files")
+os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 # 2) LocalHost 접속: 끝에 붙는 N4XyA 는 각자 다르니
 # http://localhost:8000/llm/playground 에서 python SDK 에서 확인!
